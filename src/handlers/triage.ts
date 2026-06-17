@@ -252,6 +252,10 @@ export async function handleTriage(issueNumber: number, ctx: ActionContext): Pro
 	const harness = await agent.init();
 	const session = await harness.session();
 
+	// Create the fix branch so the agent's changes don't land on main.
+	// This is needed for both initial triage and retriage.
+	await session.shell(`git checkout -B ${JSON.stringify(branch)}`);
+
 	const issueDetails = await fetchIssueDetails(ctx.repo, issueNumber, ctx.readToken);
 
 	// Run the pipeline.
