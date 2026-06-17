@@ -1,0 +1,64 @@
+name: 'Triagebot'
+description: 'AI-powered issue triage bot with a label-driven state machine'
+author: 'withastro'
+
+inputs:
+  read-token:
+    description: 'GitHub token for reading issues, labels, and PRs'
+    required: true
+  write-token:
+    description: 'GitHub token for posting comments, pushing branches, creating PRs, and managing labels'
+    required: true
+  anthropic-api-key:
+    description: 'Anthropic API key for LLM calls'
+    required: true
+
+  skills-dir:
+    description: 'Path to triage skill .md files (reproduce.md, diagnose.md, verify.md, fix.md, SKILL.md)'
+    required: true
+  build-command:
+    description: 'Command to build the project before triage runs (e.g. "pnpm install && pnpm build")'
+    required: false
+
+  triage-model:
+    description: 'Model for the triage pipeline (reproduce/diagnose/verify/fix)'
+    default: 'anthropic/claude-opus-4-6'
+  verification-model:
+    description: 'Model for fix verification and retriage checks'
+    default: 'anthropic/claude-sonnet-4-6'
+
+  # Label customization
+  label-needs-triage:
+    description: 'Label for issues waiting to be triaged'
+    default: 'triage: needs triage'
+  label-not-actionable:
+    description: 'Label for issues that are not bug reports'
+    default: 'triage: not actionable'
+  label-needs-reproduction:
+    description: 'Label for issues missing a reproduction'
+    default: 'triage: needs reproduction'
+  label-skipped:
+    description: 'Label for issues that cannot be triaged in CI'
+    default: 'triage: skipped'
+  label-unable-to-reproduce:
+    description: 'Label for issues the agent could not reproduce'
+    default: 'triage: unable to reproduce'
+  label-unable-to-fix:
+    description: 'Label for reproduced issues where no fix was found'
+    default: 'triage: unable to fix'
+  label-fix-pending:
+    description: 'Label for issues with a fix awaiting reporter confirmation'
+    default: 'triage: fix pending'
+  label-fix-rejected:
+    description: 'Label for issues where the reporter says the fix does not work'
+    default: 'triage: fix rejected'
+  label-fix-verified:
+    description: 'Label for issues where the reporter confirmed the fix works'
+    default: 'triage: fix verified'
+  pr-label-fix-verified:
+    description: 'Label to apply to PRs created from verified fixes'
+    default: 'fix verified'
+
+runs:
+  using: 'node22'
+  main: 'dist/index.mjs'

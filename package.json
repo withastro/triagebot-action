@@ -1,0 +1,23 @@
+{
+  "name": "triagebot-action",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "test": "node --test test/*.test.ts",
+    "test:evals": "node --test test/evals/*.eval.ts"
+  },
+  "dependencies": {
+    "@flue/runtime": "^0.8.1",
+    "valibot": "^1.4.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.0",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  }
+}
