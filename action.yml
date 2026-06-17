@@ -20,6 +20,10 @@ inputs:
     description: 'Command to build the project before triage runs (e.g. "pnpm install && pnpm build")'
     required: false
 
+  bot-logins:
+    description: 'Comma-separated list of bot usernames whose comments should be ignored (github-actions[bot] is always included)'
+    default: ''
+
   triage-model:
     description: 'Model for the triage pipeline (reproduce/diagnose/verify/fix)'
     default: 'anthropic/claude-opus-4-6'

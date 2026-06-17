@@ -21,6 +21,16 @@ function getInput(name: string): string {
 	return process.env[envName]?.trim() ?? '';
 }
 
+function parseBotLogins(input: string): string[] {
+	const defaults = ['github-actions[bot]'];
+	if (!input) return defaults;
+	const extra = input
+		.split(',')
+		.map((s) => s.trim())
+		.filter(Boolean);
+	return [...new Set([...defaults, ...extra])];
+}
+
 function getRequiredInput(name: string): string {
 	const value = getInput(name);
 	if (!value) {
@@ -56,7 +66,7 @@ async function main(): Promise<void> {
 		triageModel: getInput('triage-model') || 'anthropic/claude-opus-4-6',
 		verificationModel: getInput('verification-model') || 'anthropic/claude-sonnet-4-6',
 		labels,
-		botLogins: ['github-actions[bot]'],
+		botLogins: parseBotLogins(getInput('bot-logins')),
 	};
 
 	// Set the Anthropic API key for Flue.
