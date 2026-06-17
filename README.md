@@ -130,7 +130,9 @@ The action needs project-specific skill files that tell the AI agent how to work
   fix.md            # How to write and verify fixes
 ```
 
-Each file is a markdown document with instructions for the AI agent. See the [Astro monorepo skills](https://github.com/withastro/astro/tree/main/.agents/skills/triage) for a complete example.
+Each file is a markdown document with instructions for the AI agent. The [`examples/skills/triage/`](examples/skills/triage/) directory contains starter templates you can copy and customize. Look for `<!-- CUSTOMIZE -->` comments indicating project-specific sections.
+
+For a production example, see the [Astro monorepo skills](https://github.com/withastro/astro/tree/main/.agents/skills/triage).
 
 ### 3. Set up tokens
 
