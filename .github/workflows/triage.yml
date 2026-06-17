@@ -1,0 +1,59 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened, closed]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  # One triage run per issue at a time. Queue, don't cancel — avoid killing
+  # in-flight runs when the bot posts its own comment.
+  group: triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    # Skip PRs, skip bot comments that would self-trigger
+    if: >-
+      !github.event.issue.pull_request &&
+      (github.event.action != 'created' ||
+       (github.event.comment.user.login != 'github-actions[bot]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install deps
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Run triagebot
+        uses: ./
+        with:
+          read-token: ${{ secrets.GITHUB_TOKEN }}
+          write-token: ${{ secrets.FREDKBOT_GITHUB_TOKEN }}
+          anthropic-api-key: ${{ secrets.CI_ANTHROPIC_API_KEY }}
+          skills-dir: .agents/skills/triage
+          build-command: "npm run build"
