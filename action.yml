@@ -13,9 +13,15 @@ inputs:
     description: 'Anthropic API key for LLM calls'
     required: true
 
-  skills-dir:
-    description: 'Path to triage skill .md files (reproduce.md, diagnose.md, verify.md, fix.md, SKILL.md)'
+  triage-skill:
+    description: 'Path to triage skill directory (SKILL.md, reproduce.md, diagnose.md, verify.md, fix.md)'
     required: true
+  pr-skill:
+    description: 'Path to PR writer skill directory. If not provided, uses a built-in prompt to generate PR title and body.'
+    required: false
+  pr-skill-name:
+    description: 'The skill name (from SKILL.md frontmatter) to invoke for PR generation. Only used when pr-skill is set.'
+    default: 'pr-writer'
   build-command:
     description: 'Command to build the project before triage runs (e.g. "pnpm install && pnpm build")'
     required: false

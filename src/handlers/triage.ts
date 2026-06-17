@@ -246,7 +246,7 @@ export async function handleTriage(issueNumber: number, ctx: ActionContext): Pro
 			},
 		}),
 		model: ctx.triageModel,
-		skills: [ctx.skillsDir],
+		skills: [ctx.triageSkill],
 	}));
 
 	const harness = await agent.init();

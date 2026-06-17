@@ -9,7 +9,9 @@ export interface ActionContext {
 	readToken: string;
 	writeToken: string;
 	anthropicApiKey: string;
-	skillsDir: string;
+	triageSkill: string;
+	prSkill: string | null;
+	prSkillName: string;
 	buildCommand: string | null;
 	triageModel: string;
 	verificationModel: string;

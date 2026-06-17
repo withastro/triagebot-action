@@ -114,12 +114,13 @@ jobs:
           read-token: ${{ secrets.GITHUB_TOKEN }}
           write-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          skills-dir: .agents/skills/triage
+          triage-skill: .agents/skills/triage
+          bot-logins: my-bot-username
 ```
 
 ### 2. Create triage skills
 
-The action needs project-specific skill files that tell the AI agent how to work with your codebase. Create these in the directory specified by `skills-dir`:
+The action needs project-specific skill files that tell the AI agent how to work with your codebase. Create these in the directory specified by `triage-skill`:
 
 ```
 .agents/skills/triage/
@@ -150,7 +151,9 @@ You also need an **`anthropic-api-key`** for the AI agent.
 | `read-token` | Yes | | GitHub token for reading issues/labels/PRs |
 | `write-token` | Yes | | GitHub token for posting comments, pushing branches, creating PRs |
 | `anthropic-api-key` | Yes | | Anthropic API key for LLM calls |
-| `skills-dir` | Yes | | Path to triage skill `.md` files |
+| `triage-skill` | Yes | | Path to triage skill directory (`SKILL.md`, `reproduce.md`, etc.) |
+| `pr-skill` | No | | Path to PR writer skill directory. If not provided, uses a built-in prompt. |
+| `bot-logins` | No | | Comma-separated list of bot usernames whose comments should be ignored. `github-actions[bot]` is always included. |
 | `build-command` | No | | Command to build the project before triage |
 | `triage-model` | No | `anthropic/claude-opus-4-6` | Model for the triage pipeline |
 | `verification-model` | No | `anthropic/claude-sonnet-4-6` | Model for fix verification and retriage checks |
@@ -181,14 +184,12 @@ The action has two layers:
 - Re-triage evaluation (is there new actionable information?)
 - Fix verification (did the reporter confirm the fix?)
 - Comment generation from triage findings
-- PR creation from verified fix branches
+- PR creation from verified fix branches (using project's PR skill or built-in prompt)
 - Branch cleanup on issue close
 
 **Project-owned** — the skill files that teach the AI agent about your specific codebase:
-- How to set up and run reproductions
-- How to navigate and instrument source code for diagnosis
-- How to distinguish bugs from intended behavior
-- How to write minimal fixes and tests
+- **Triage skills** (required) — how to reproduce, diagnose, verify, and fix bugs
+- **PR writer skill** (optional) — how to format PR titles and bodies for your project
 
 The action invokes project skills via [Flue](https://github.com/anthropics/flue), an agent orchestration framework. The AI agent runs shell commands on the GitHub Actions runner to build, test, and debug the project.
 

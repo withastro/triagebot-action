@@ -55,5 +55,4 @@ jobs:
           read-token: ${{ secrets.GITHUB_TOKEN }}
           write-token: ${{ secrets.FREDKBOT_GITHUB_TOKEN }}
           anthropic-api-key: ${{ secrets.CI_ANTHROPIC_API_KEY }}
-          skills-dir: .agents/skills/triage
-          build-command: "npm run build"
+          triage-skill: .agents/skills/triage
