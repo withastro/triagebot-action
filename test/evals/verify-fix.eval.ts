@@ -10,6 +10,7 @@ import { describe, it } from 'node:test';
 import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
+import { createSession } from '../../src/flue.ts';
 
 const classificationSchema = v.object({
 	status: v.picklist(['confirmed', 'rejected', 'inconclusive']),
@@ -24,8 +25,7 @@ async function classifyComment(
 		model: 'anthropic/claude-sonnet-4-6',
 	}));
 
-	const harness = await agent.init();
-	const session = await harness.session();
+	const session = await createSession(agent);
 
 	const { data } = await session.prompt(
 		`You are reviewing a GitHub issue comment to determine if the commenter is confirming that a proposed fix works.

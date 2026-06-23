@@ -11,6 +11,7 @@ import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 import type { ActionContext } from '../context.ts';
+import { createSession } from '../flue.ts';
 import {
 	addLabels,
 	fetchIssueDetails,
@@ -330,8 +331,7 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 		skills: [ctx.triageSkill],
 	}));
 
-	const harness = await agent.init();
-	const session = await harness.session();
+	const session = await createSession(agent);
 
 	// Create the fix branch so the agent's changes don't land on main.
 	// This is needed for both initial triage and retriage.

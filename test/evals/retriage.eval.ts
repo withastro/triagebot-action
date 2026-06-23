@@ -10,6 +10,7 @@ import { describe, it } from 'node:test';
 import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
+import { createSession } from '../../src/flue.ts';
 
 async function shouldRetriage(conversation: string): Promise<'yes' | 'no'> {
 	const agent = createAgent(() => ({
@@ -17,8 +18,7 @@ async function shouldRetriage(conversation: string): Promise<'yes' | 'no'> {
 		model: 'anthropic/claude-sonnet-4-6',
 	}));
 
-	const harness = await agent.init();
-	const session = await harness.session();
+	const session = await createSession(agent);
 
 	const { data } = await session.prompt(
 		`You are reviewing a GitHub issue conversation to decide whether a triage re-run is warranted.

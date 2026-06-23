@@ -11,6 +11,7 @@ import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 import type { ActionContext } from '../context.ts';
+import { createSession } from '../flue.ts';
 import type { IssueDetails } from '../github.ts';
 import {
 	addLabels,
@@ -119,8 +120,7 @@ export async function handleVerifyFix(issueNumber: number, ctx: ActionContext): 
 		...(skills.length > 0 ? { skills } : {}),
 	}));
 
-	const harness = await agent.init();
-	const session = await harness.session();
+	const session = await createSession(agent);
 
 	// Classify the comment.
 	const { data: classification } = await session.prompt(
