@@ -73,5 +73,5 @@ inputs:
     default: 'fix verified'
 
 runs:
-  using: 'node22'
+  using: 'node24'
   main: 'dist/index.mjs'
