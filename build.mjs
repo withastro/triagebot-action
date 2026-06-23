@@ -9,6 +9,6 @@ await esbuild.build({
 	target: 'node22',
 	sourcemap: true,
 	banner: {
-		js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+		js: "import { createRequire as __triagebotCreateRequire } from 'node:module'; const require = __triagebotCreateRequire(import.meta.url);",
 	},
 });
