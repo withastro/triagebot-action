@@ -237,6 +237,30 @@ export async function findPullRequest(
 	return (pulls[0] as PullRequest) ?? null;
 }
 
+export async function findBranch(
+	repo: string,
+	branches: string[],
+	token: string,
+): Promise<string | null> {
+	for (const branch of branches) {
+		const branchPath = branch.split('/').map(encodeURIComponent).join('/');
+		const res = await fetch(
+			`https://api.github.com/repos/${repo}/git/matching-refs/heads/${branchPath}`,
+			{
+				headers: headers(token),
+			},
+		);
+		if (!res.ok) {
+			throw new Error(`Failed to check branch ${branch} (HTTP ${res.status}): ${await res.text()}`);
+		}
+		const refs = (await res.json()) as Array<{ ref?: string }>;
+		if (refs.some((ref) => ref.ref === `refs/heads/${branch}`)) {
+			return branch;
+		}
+	}
+	return null;
+}
+
 // ---------- Branches ----------
 
 export async function deleteBranch(repo: string, branch: string, token: string): Promise<void> {
