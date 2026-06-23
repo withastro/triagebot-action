@@ -111,13 +111,11 @@ export async function handleVerifyFix(issueNumber: number, ctx: ActionContext): 
 		return;
 	}
 
-	const skills = ctx.prSkill ? [ctx.prSkill] : [];
 	const agent = createAgent(() => ({
 		sandbox: local({
 			env: { GH_TOKEN: ctx.readToken },
 		}),
 		model: ctx.verificationModel,
-		...(skills.length > 0 ? { skills } : {}),
 	}));
 
 	const session = await createSession(agent);
