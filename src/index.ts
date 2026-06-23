@@ -11,15 +11,11 @@ import { handleCleanup } from './handlers/cleanup.ts';
 import { handleRetriage } from './handlers/retriage.ts';
 import { handleTriage } from './handlers/triage.ts';
 import { handleVerifyFix } from './handlers/verify-fix.ts';
+import { getInput } from './input.ts';
 import { labelConfigFromInputs } from './labels.ts';
 import { type GitHubEvent, route } from './router.ts';
 
 // ---------- GitHub Actions helpers ----------
-
-function getInput(name: string): string {
-	const envName = `INPUT_${name.replace(/-/g, '_').toUpperCase()}`;
-	return process.env[envName]?.trim() ?? '';
-}
 
 function parseBotLogins(input: string): string[] {
 	const defaults = ['github-actions[bot]'];
