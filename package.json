@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "check:dist": "node --check dist/index.mjs",
     "format": "biome format --write .",
     "lint": "biome check .",
-    "test": "node --test test/*.test.ts",
+    "test": "pnpm build && pnpm check:dist && node --test test/*.test.ts test/integration/*.test.ts",
+    "test:unit": "node --test test/*.test.ts",
+    "test:integration": "pnpm build && pnpm check:dist && node --test test/integration/*.test.ts",
     "test:evals": "node --test test/evals/*.eval.ts"
   },
   "dependencies": {
