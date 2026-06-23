@@ -56,6 +56,9 @@ inputs:
   label-unable-to-fix:
     description: 'Label for reproduced issues where no fix was found'
     default: 'triage: unable to fix'
+  label-failed:
+    description: 'Label for issues where triage failed unexpectedly and can be retried'
+    default: 'triage: failed'
   label-fix-pending:
     description: 'Label for issues with a fix awaiting reporter confirmation'
     default: 'triage: fix pending'
