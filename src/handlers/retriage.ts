@@ -8,6 +8,7 @@ import { createAgent } from '@flue/runtime';
 import { local } from '@flue/runtime/node';
 import * as v from 'valibot';
 import type { ActionContext } from '../context.ts';
+import { createSession } from '../flue.ts';
 import { fetchIssueDetails, swapLabel } from '../github.ts';
 import { countTriageFailures, handleTriage, MAX_TRIAGE_FAILURES } from './triage.ts';
 
@@ -32,8 +33,7 @@ export async function handleRetriage(
 		model: ctx.verificationModel,
 	}));
 
-	const harness = await agent.init();
-	const session = await harness.session();
+	const session = await createSession(agent);
 
 	const { data: decision } = await session.prompt(
 		`You are reviewing a GitHub issue conversation to decide whether a triage re-run is warranted.
