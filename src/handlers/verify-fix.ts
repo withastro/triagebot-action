@@ -17,6 +17,7 @@ import {
 	addLabels,
 	createPullRequest,
 	fetchIssueDetails,
+	findBranch,
 	findPullRequest,
 	postComment,
 	swapLabel,
@@ -98,7 +99,14 @@ ${opts.issueDetails.body}
 }
 
 export async function handleVerifyFix(issueNumber: number, ctx: ActionContext): Promise<void> {
-	const branch = `triagebot/fix-${issueNumber}`;
+	const branch = await findBranch(
+		ctx.repo,
+		[`triagebot/fix-${issueNumber}`, `flue/fix-${issueNumber}`],
+		ctx.readToken,
+	);
+	if (!branch) {
+		throw new Error(`No fix branch found for issue #${issueNumber}`);
+	}
 	const issueDetails = await fetchIssueDetails(ctx.repo, issueNumber, ctx.readToken);
 
 	// Find the latest non-bot comment.
@@ -198,20 +206,18 @@ Return your classification.`,
 		return;
 	}
 
-	// Fix confirmed — create PR.
-	await swapLabel(
-		ctx.repo,
-		issueNumber,
-		ctx.labels.fixPending,
-		ctx.labels.fixVerified,
-		ctx.writeToken,
-	);
-
 	// Check if a PR already exists.
 	const existingPr = await findPullRequest(ctx.repo, branch, ctx.readToken);
 
 	if (existingPr) {
 		console.info(`PR already exists: ${existingPr.html_url}`);
+		await swapLabel(
+			ctx.repo,
+			issueNumber,
+			ctx.labels.fixPending,
+			ctx.labels.fixVerified,
+			ctx.writeToken,
+		);
 		await postComment(
 			ctx.repo,
 			issueNumber,
@@ -240,6 +246,13 @@ Return your classification.`,
 
 	console.info(`PR created: ${pr.html_url}`);
 	await addLabels(ctx.repo, pr.number, [ctx.labels.prFixVerified], ctx.writeToken);
+	await swapLabel(
+		ctx.repo,
+		issueNumber,
+		ctx.labels.fixPending,
+		ctx.labels.fixVerified,
+		ctx.writeToken,
+	);
 
 	await postComment(
 		ctx.repo,
