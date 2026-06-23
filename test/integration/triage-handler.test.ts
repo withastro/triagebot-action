@@ -8,10 +8,12 @@ import { handleTriage } from '../../src/handlers/triage.ts';
 import { labelConfigFromInputs } from '../../src/labels.ts';
 
 const originalFetch = globalThis.fetch;
+const originalCwd = process.cwd();
 let tempDir: string | null = null;
 
 afterEach(() => {
 	globalThis.fetch = originalFetch;
+	process.chdir(originalCwd);
 	if (tempDir) {
 		rmSync(tempDir, { recursive: true, force: true });
 		tempDir = null;
@@ -27,7 +29,7 @@ function jsonResponse(body: unknown): Response {
 
 function createTriageSkill(): string {
 	tempDir = mkdtempSync(join(tmpdir(), 'triagebot-action-'));
-	const skillDir = join(tempDir, 'triage');
+	const skillDir = join(tempDir, '.agents', 'skills', 'triage');
 	mkdirSync(skillDir, { recursive: true });
 	writeFileSync(
 		join(skillDir, 'SKILL.md'),
@@ -37,6 +39,7 @@ function createTriageSkill(): string {
 	writeFileSync(join(skillDir, 'diagnose.md'), '# Diagnose\n');
 	writeFileSync(join(skillDir, 'verify.md'), '# Verify\n');
 	writeFileSync(join(skillDir, 'fix.md'), '# Fix\n');
+	process.chdir(tempDir);
 	return skillDir;
 }
 
@@ -96,6 +99,8 @@ describe('handleTriage integration', () => {
 			error = err;
 		}
 
-		assert.doesNotMatch(String(error instanceof Error ? error.stack : error), /skills\[0\]/);
+		const message = String(error instanceof Error ? error.stack : error);
+		assert.doesNotMatch(message, /skills\[0\]/);
+		assert.doesNotMatch(message, /Skill "triage" is not registered/);
 	});
 });

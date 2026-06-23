@@ -328,7 +328,6 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 			},
 		}),
 		model: ctx.triageModel,
-		skills: [ctx.triageSkill],
 	}));
 
 	const session = await createSession(agent);
