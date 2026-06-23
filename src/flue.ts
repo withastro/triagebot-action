@@ -7,6 +7,7 @@ import {
 	InMemorySessionStore,
 	resolveModel,
 } from '@flue/runtime/internal';
+import { createFlueEventLogger } from './flue-logging.ts';
 
 const defaultStore = new InMemorySessionStore();
 
@@ -38,6 +39,8 @@ export async function createSession(agent: CreatedAgent): Promise<FlueSession> {
 		createDefaultEnv,
 		defaultStore,
 	});
+	const logger = createFlueEventLogger();
+	ctx.setEventCallback((event) => logger.present(event));
 	const harness = await ctx.init(agent);
 	return harness.session();
 }
