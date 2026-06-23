@@ -16,6 +16,7 @@ const config: LabelConfig = {
 	skipped: 'triage: skipped',
 	unableToReproduce: 'triage: unable to reproduce',
 	unableToFix: 'triage: unable to fix',
+	failed: 'triage: failed',
 	fixPending: 'triage: fix pending',
 	fixRejected: 'triage: fix rejected',
 	fixVerified: 'triage: fix verified',
@@ -24,9 +25,9 @@ const config: LabelConfig = {
 
 describe('labels', () => {
 	describe('allTriageLabels', () => {
-		it('returns 9 triage labels (excludes PR label)', () => {
+		it('returns 10 triage labels (excludes PR label)', () => {
 			const all = allTriageLabels(config);
-			assert.equal(all.length, 9);
+			assert.equal(all.length, 10);
 			assert.ok(!all.includes('fix verified'));
 		});
 	});
@@ -38,6 +39,7 @@ describe('labels', () => {
 			assert.ok(retriageable.includes('triage: needs reproduction'));
 			assert.ok(retriageable.includes('triage: unable to reproduce'));
 			assert.ok(retriageable.includes('triage: unable to fix'));
+			assert.ok(retriageable.includes('triage: failed'));
 			assert.ok(retriageable.includes('triage: fix rejected'));
 		});
 
@@ -82,6 +84,7 @@ describe('labels', () => {
 		it('uses defaults when inputs are empty', () => {
 			const result = labelConfigFromInputs(() => '');
 			assert.equal(result.needsTriage, 'triage: needs triage');
+			assert.equal(result.failed, 'triage: failed');
 			assert.equal(result.fixPending, 'triage: fix pending');
 		});
 

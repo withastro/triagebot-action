@@ -13,6 +13,7 @@ export interface LabelConfig {
 	skipped: string;
 	unableToReproduce: string;
 	unableToFix: string;
+	failed: string;
 	fixPending: string;
 	fixRejected: string;
 	fixVerified: string;
@@ -27,6 +28,7 @@ export function labelConfigFromInputs(getInput: (name: string) => string): Label
 		skipped: getInput('label-skipped') || 'triage: skipped',
 		unableToReproduce: getInput('label-unable-to-reproduce') || 'triage: unable to reproduce',
 		unableToFix: getInput('label-unable-to-fix') || 'triage: unable to fix',
+		failed: getInput('label-failed') || 'triage: failed',
 		fixPending: getInput('label-fix-pending') || 'triage: fix pending',
 		fixRejected: getInput('label-fix-rejected') || 'triage: fix rejected',
 		fixVerified: getInput('label-fix-verified') || 'triage: fix verified',
@@ -43,6 +45,7 @@ export function allTriageLabels(config: LabelConfig): string[] {
 		config.skipped,
 		config.unableToReproduce,
 		config.unableToFix,
+		config.failed,
 		config.fixPending,
 		config.fixRejected,
 		config.fixVerified,
@@ -56,6 +59,7 @@ export function retriageableLabels(config: LabelConfig): string[] {
 		config.needsReproduction,
 		config.unableToReproduce,
 		config.unableToFix,
+		config.failed,
 		config.fixRejected,
 	];
 }

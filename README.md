@@ -20,6 +20,7 @@ stateDiagram-v2
     needs_triage --> unable_to_reproduce: Can't reproduce
     needs_triage --> unable_to_fix: Reproduced, no fix
     needs_triage --> fix_pending: Reproduced + fix found
+    needs_triage --> failed: Unexpected triage failure
 
     fix_pending --> fix_verified: Reporter confirms fix
     fix_pending --> fix_rejected: Reporter says fix fails
@@ -27,6 +28,7 @@ stateDiagram-v2
     needs_reproduction --> needs_triage: New comment with repro
     unable_to_reproduce --> needs_triage: New comment with info
     unable_to_fix --> needs_triage: New comment with info
+    failed --> needs_triage: New comment with info, max 3 attempts
     fix_rejected --> needs_triage: New comment with info
 
     state needs_triage {
@@ -53,6 +55,7 @@ stateDiagram-v2
 | `triage: skipped` | Cannot triage in CI (host-specific, unsupported runtime/version) |
 | `triage: unable to reproduce` | Agent attempted reproduction but could not reproduce |
 | `triage: unable to fix` | Bug reproduced and diagnosed, but no fix found |
+| `triage: failed` | Triage failed unexpectedly; can be retried up to 3 failed attempts |
 | `triage: fix pending` | Fix pushed to branch, waiting for reporter confirmation |
 | `triage: fix rejected` | Reporter says the proposed fix does not work |
 | `triage: fix verified` | Reporter confirmed the fix works, PR created |
@@ -65,6 +68,7 @@ All label names are customizable via action inputs.
 - `triage: needs reproduction`
 - `triage: unable to reproduce`
 - `triage: unable to fix`
+- `triage: failed`
 - `triage: fix rejected`
 
 **Terminal labels** — the bot takes no further action:
@@ -170,6 +174,7 @@ All labels are customizable. These are the defaults:
 | `label-skipped` | `triage: skipped` |
 | `label-unable-to-reproduce` | `triage: unable to reproduce` |
 | `label-unable-to-fix` | `triage: unable to fix` |
+| `label-failed` | `triage: failed` |
 | `label-fix-pending` | `triage: fix pending` |
 | `label-fix-rejected` | `triage: fix rejected` |
 | `label-fix-verified` | `triage: fix verified` |

@@ -11,6 +11,7 @@ const labels: LabelConfig = {
 	skipped: 'triage: skipped',
 	unableToReproduce: 'triage: unable to reproduce',
 	unableToFix: 'triage: unable to fix',
+	failed: 'triage: failed',
 	fixPending: 'triage: fix pending',
 	fixRejected: 'triage: fix rejected',
 	fixVerified: 'triage: fix verified',
@@ -76,6 +77,7 @@ describe('router', () => {
 		'triage: needs reproduction',
 		'triage: unable to reproduce',
 		'triage: unable to fix',
+		'triage: failed',
 		'triage: fix rejected',
 	]) {
 		it(`routes comment on "${label}" to retriage`, () => {

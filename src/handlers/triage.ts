@@ -24,6 +24,9 @@ import {
 import { currentTriageLabel } from '../labels.ts';
 import { generateComment } from './comment.ts';
 
+export const MAX_TRIAGE_FAILURES = 3;
+const TRIAGE_FAILURE_MARKER = '<!-- triagebot:triage-failed -->';
+
 interface TriageResult {
 	completedStage: 'reproduce' | 'verify' | 'fix';
 	reproducible: boolean;
@@ -227,8 +230,86 @@ function resolveTriageLabel(result: TriageResult, ctx: ActionContext): string {
 	return ctx.labels.unableToFix;
 }
 
+export function countTriageFailures(issueDetails: IssueDetails): number {
+	return issueDetails.comments.filter((comment) => comment.body.includes(TRIAGE_FAILURE_MARKER))
+		.length;
+}
+
+function currentRunUrl(ctx: ActionContext): string | null {
+	const runId = process.env.GITHUB_RUN_ID;
+	if (!runId) return null;
+	const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+	return `${serverUrl}/${ctx.repo}/actions/runs/${runId}`;
+}
+
+function formatFailureComment(error: unknown, attempt: number, ctx: ActionContext): string {
+	const runUrl = currentRunUrl(ctx);
+	const message = error instanceof Error ? error.message : String(error);
+	const retryMessage =
+		attempt >= MAX_TRIAGE_FAILURES
+			? 'This was the final automatic triage attempt. I will not retry this issue again unless a maintainer clears the failure state manually.'
+			: 'I can retry if a new comment provides more information or asks me to try again.';
+
+	return `${TRIAGE_FAILURE_MARKER}
+Triage failed unexpectedly (attempt ${attempt} of ${MAX_TRIAGE_FAILURES}).
+
+${runUrl ? `Run: ${runUrl}\n\n` : ''}${retryMessage}
+
+Error:
+
+\`\`\`
+${message}
+\`\`\``;
+}
+
+async function recordTriageFailure(
+	issueNumber: number,
+	ctx: ActionContext,
+	error: unknown,
+): Promise<void> {
+	const issueDetails = await fetchIssueDetails(ctx.repo, issueNumber, ctx.readToken);
+	const attempt = Math.min(countTriageFailures(issueDetails) + 1, MAX_TRIAGE_FAILURES);
+	const currentLabel = currentTriageLabel(
+		issueDetails.labels.map((l) => l.name),
+		ctx.labels,
+	);
+
+	await postComment(
+		ctx.repo,
+		issueNumber,
+		formatFailureComment(error, attempt, ctx),
+		ctx.writeToken,
+	);
+	await swapLabel(ctx.repo, issueNumber, currentLabel, ctx.labels.failed, ctx.writeToken);
+}
+
 export async function handleTriage(issueNumber: number, ctx: ActionContext): Promise<void> {
+	try {
+		await runTriage(issueNumber, ctx);
+	} catch (err) {
+		try {
+			await recordTriageFailure(issueNumber, ctx, err);
+		} catch (failureErr) {
+			console.error('Failed to record triage failure:', failureErr);
+		}
+		throw err;
+	}
+}
+
+async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void> {
 	const branch = `triagebot/fix-${issueNumber}`;
+	const issueDetails = await fetchIssueDetails(ctx.repo, issueNumber, ctx.readToken);
+	const currentLabel = currentTriageLabel(
+		issueDetails.labels.map((l) => l.name),
+		ctx.labels,
+	);
+	if (
+		currentLabel === ctx.labels.failed &&
+		countTriageFailures(issueDetails) >= MAX_TRIAGE_FAILURES
+	) {
+		console.info(`Skipping triage for issue #${issueNumber}: maximum failed attempts reached.`);
+		return;
+	}
 
 	const agent = createAgent(() => ({
 		sandbox: local({
@@ -255,8 +336,6 @@ export async function handleTriage(issueNumber: number, ctx: ActionContext): Pro
 	// Create the fix branch so the agent's changes don't land on main.
 	// This is needed for both initial triage and retriage.
 	await session.shell(`git checkout -B ${JSON.stringify(branch)}`);
-
-	const issueDetails = await fetchIssueDetails(ctx.repo, issueNumber, ctx.readToken);
 
 	// Run the pipeline.
 	const triageResult = await runTriagePipeline(session, issueNumber, issueDetails);
@@ -298,10 +377,6 @@ export async function handleTriage(issueNumber: number, ctx: ActionContext): Pro
 	await postComment(ctx.repo, issueNumber, comment, ctx.writeToken);
 
 	// Determine and apply the new triage label.
-	const currentLabel = currentTriageLabel(
-		issueDetails.labels.map((l) => l.name),
-		ctx.labels,
-	);
 	const newLabel = resolveTriageLabel(triageResult, ctx);
 	await swapLabel(ctx.repo, issueNumber, currentLabel, newLabel, ctx.writeToken);
 
