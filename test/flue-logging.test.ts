@@ -11,9 +11,32 @@ describe('createFlueEventLogger', () => {
 		logger.present({ type: 'thinking_start' } as FlueEvent);
 		logger.present({ type: 'thinking_delta', delta: 'Checking files\n' } as FlueEvent);
 		logger.present({ type: 'thinking_end' } as FlueEvent);
-		logger.present({ type: 'tool_start', toolName: 'read' } as FlueEvent);
-		logger.present({ type: 'tool', toolName: 'read', isError: false } as FlueEvent);
-		logger.present({ type: 'tool', toolName: 'bash', isError: true } as FlueEvent);
+		logger.present({
+			type: 'tool_start',
+			toolName: 'bash',
+			args: { command: 'npm test' },
+		} as FlueEvent);
+		logger.present({
+			type: 'tool_call',
+			toolName: 'bash',
+			isError: false,
+			durationMs: 12,
+			result: {
+				content: [{ type: 'text', text: 'tests passed' }],
+				details: { exitCode: 0 },
+			},
+		} as FlueEvent);
+		logger.present({
+			type: 'tool_execution_start',
+			toolName: 'read',
+			args: { filePath: 'a.ts' },
+		} as FlueEvent);
+		logger.present({
+			type: 'tool_execution_end',
+			toolName: 'read',
+			isError: true,
+			result: { content: [{ type: 'text', text: 'missing' }] },
+		} as FlueEvent);
 		logger.present({ type: 'log', level: 'info', message: 'hello' } as FlueEvent);
 		logger.present({
 			type: 'compaction_start',
@@ -26,9 +49,10 @@ describe('createFlueEventLogger', () => {
 			'[flue] thinking:start',
 			'  Checking files',
 			'[flue] thinking:done',
-			'[flue] tool:start read',
-			'[flue] tool:done read',
-			'[flue] tool:error bash',
+			'[flue] tool:start bash $ npm test',
+			'[flue] tool:done bash (12ms) exit=0\n  tests passed',
+			'[flue] tool:start read args={"filePath":"a.ts"}',
+			'[flue] tool:error read\n  missing',
 			'[flue] info hello',
 			'[flue] compaction:start reason=threshold tokens=123',
 			'[flue] compaction:done messages 10 -> 4',

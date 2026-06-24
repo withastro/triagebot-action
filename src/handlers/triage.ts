@@ -39,6 +39,67 @@ interface TriageResult {
 	commitMessage: string | null;
 }
 
+interface PreviewRelease {
+	/** Install URLs for each published package, e.g. "https://pkg.pr.new/astro@abc1234". */
+	urls: string[];
+}
+
+function packageDirsFromChangedFiles(changedFiles: string[]): string[] {
+	const packageDirs = new Set<string>();
+	for (const file of changedFiles) {
+		const match = file.match(/^(packages\/(?:integrations\/)?[^/]+)\//);
+		if (match) packageDirs.add(match[1]);
+	}
+	return [...packageDirs];
+}
+
+async function publishPreviewRelease(session: FlueSession): Promise<PreviewRelease | null> {
+	console.info('Preview release: checking changed package directories.');
+	const diffResult = await session.shell('git diff main --name-only');
+	if (!diffResult.stdout.trim()) {
+		console.info('Preview release skipped: no changed files relative to main.');
+		return null;
+	}
+
+	const changedFiles = diffResult.stdout.trim().split('\n');
+	const packageDirs = packageDirsFromChangedFiles(changedFiles);
+	console.info('Preview release changed package directories:', packageDirs);
+	if (packageDirs.length === 0) {
+		console.info('Preview release skipped: no changed packages under packages/.');
+		return null;
+	}
+
+	const packages = packageDirs.join(' ');
+	console.info(`Preview release: publishing packages ${packages}.`);
+	const publishResult = await session.shell(
+		`pnpm dlx pkg-pr-new publish --pnpm --compact --no-template --comment=off --json preview-release.json ${packages}`,
+	);
+	if (publishResult.exitCode !== 0) {
+		console.warn('Preview release publish failed:', publishResult.stderr || publishResult.stdout);
+		return null;
+	}
+
+	const jsonResult = await session.shell(
+		"node -e \"process.stdout.write(require('fs').readFileSync('preview-release.json','utf8'))\"",
+	);
+	try {
+		const output = JSON.parse(jsonResult.stdout.trim()) as {
+			packages?: Array<{ url?: unknown }>;
+		};
+		const urls = (output.packages ?? [])
+			.map((pkg) => pkg.url)
+			.filter((url): url is string => typeof url === 'string' && url.length > 0);
+		if (urls.length === 0) {
+			console.warn('Preview release JSON contained no package URLs.');
+			return null;
+		}
+		return { urls };
+	} catch (err) {
+		console.warn('Failed to parse preview release JSON output:', err);
+		return null;
+	}
+}
+
 async function runTriagePipeline(
 	session: FlueSession,
 	issueNumber: number,
@@ -220,14 +281,18 @@ ${comment}
 /**
  * Determine which triage label to apply based on the pipeline result.
  */
-function resolveTriageLabel(result: TriageResult, ctx: ActionContext): string {
+function resolveTriageLabel(
+	result: TriageResult,
+	ctx: ActionContext,
+	previewRelease: PreviewRelease | null,
+): string {
 	if (result.skipped) {
 		if (result.skippedReason === 'not-actionable') return ctx.labels.notActionable;
 		if (result.skippedReason === 'missing-details') return ctx.labels.needsReproduction;
 		return ctx.labels.skipped;
 	}
 	if (!result.reproducible) return ctx.labels.unableToReproduce;
-	if (result.fixed) return ctx.labels.fixPending;
+	if (result.fixed) return previewRelease ? ctx.labels.fixPending : ctx.labels.needsTriage;
 	return ctx.labels.unableToFix;
 }
 
@@ -338,26 +403,42 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 
 	// Run the pipeline.
 	const triageResult = await runTriagePipeline(session, issueNumber, issueDetails);
+	console.info('Triage pipeline result:', triageResult);
 	let isPushed = false;
 
 	// Push fix branch if there are changes.
 	{
 		const diff = await session.shell('git diff main --stat');
+		console.info(`Triage diff stat present: ${Boolean(diff.stdout.trim())}`);
 		if (diff.stdout.trim()) {
 			const status = await session.shell('git status --porcelain');
+			console.info(`Triage worktree status present: ${Boolean(status.stdout.trim())}`);
 			if (status.stdout.trim()) {
 				await session.shell('git add -A');
 				const defaultMessage = triageResult.fixed
 					? 'fix(auto-triage): automated fix'
 					: 'test(auto-triage): failing test and investigation notes';
-				await session.shell(
-					`git commit -m ${JSON.stringify(triageResult.commitMessage ?? defaultMessage)}`,
-				);
+				const commitMessage = triageResult.commitMessage ?? defaultMessage;
+				console.info(`Triage committing changes with message: ${commitMessage}`);
+				await session.shell(`git commit -m ${JSON.stringify(commitMessage)}`);
 			}
 			const pushResult = await gitPush(ctx.repo, branch, ctx.writeToken, { force: true });
 			console.info('push result:', pushResult);
 			isPushed = pushResult.exitCode === 0;
 		}
+	}
+	console.info(`Triage branch pushed: ${isPushed}`);
+
+	let previewRelease: PreviewRelease | null = null;
+	if (triageResult.fixed && isPushed) {
+		previewRelease = await publishPreviewRelease(session);
+		if (previewRelease) {
+			console.info('Preview release published:', previewRelease.urls);
+		} else {
+			console.info('Preview release unavailable for fixed issue.');
+		}
+	} else {
+		console.info(`Preview release skipped: fixed=${triageResult.fixed} branchPushed=${isPushed}.`);
 	}
 
 	// Fetch repo labels for comment generation and label selection.
@@ -371,12 +452,16 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 		priorityLabels,
 		issueDetails,
 		repo: ctx.repo,
+		previewRelease,
 	});
+	console.info(`Generated triage comment (${comment.length} chars).`);
 
 	await postComment(ctx.repo, issueNumber, comment, ctx.writeToken);
+	console.info(`Posted triage comment for issue #${issueNumber}.`);
 
 	// Determine and apply the new triage label.
-	const newLabel = resolveTriageLabel(triageResult, ctx);
+	const newLabel = resolveTriageLabel(triageResult, ctx, previewRelease);
+	console.info(`Swapping triage label from ${currentLabel ?? '(none)'} to ${newLabel}.`);
 	await swapLabel(ctx.repo, issueNumber, currentLabel, newLabel, ctx.writeToken);
 
 	// Apply priority + package labels if the issue was reproduced.
@@ -386,6 +471,7 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 			priorityLabels,
 			packageLabels,
 		});
+		console.info('Selected additional labels:', selectedLabels);
 		if (selectedLabels.length > 0) {
 			await addLabels(ctx.repo, issueNumber, selectedLabels, ctx.writeToken);
 		}

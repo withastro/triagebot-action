@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
@@ -11,6 +11,7 @@ import { labelConfigFromInputs } from '../../src/labels.ts';
 const originalCwd = process.cwd();
 const originalFetch = globalThis.fetch;
 const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
+const originalPath = process.env.PATH;
 let tempDir: string | null = null;
 
 afterEach(() => {
@@ -18,6 +19,8 @@ afterEach(() => {
 	globalThis.fetch = originalFetch;
 	if (originalAnthropicKey === undefined) delete process.env.ANTHROPIC_API_KEY;
 	else process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
+	if (originalPath === undefined) delete process.env.PATH;
+	else process.env.PATH = originalPath;
 	if (tempDir) {
 		rmSync(tempDir, { recursive: true, force: true });
 		tempDir = null;
@@ -41,6 +44,8 @@ function setupRepo(): string {
 	writeFileSync(join(skillDir, 'diagnose.md'), '# Diagnose\n');
 	writeFileSync(join(skillDir, 'verify.md'), '# Verify\n');
 	writeFileSync(join(skillDir, 'fix.md'), '# Fix\n');
+	mkdirSync(join(tempDir, 'packages', 'astro', 'src'), { recursive: true });
+	writeFileSync(join(tempDir, 'packages', 'astro', 'src', 'index.ts'), 'export const value = 1;\n');
 	writeFileSync(join(tempDir, 'README.md'), '# fixture\n');
 	run('git', ['init', '-b', 'main'], tempDir);
 	run('git', ['config', 'user.email', 'test@example.com'], tempDir);
@@ -49,6 +54,34 @@ function setupRepo(): string {
 	run('git', ['commit', '-m', 'initial'], tempDir);
 	process.chdir(tempDir);
 	return skillDir;
+}
+
+function configureLocalPushRemote(): void {
+	assert.ok(tempDir);
+	const remoteDir = join(tempDir, '.git', 'remote.git');
+	run('git', ['init', '--bare', remoteDir], tempDir);
+	run(
+		'git',
+		[
+			'config',
+			`url.file://${remoteDir}.insteadOf`,
+			'https://x-access-token:write-token@github.com/withastro/astro.git',
+		],
+		tempDir,
+	);
+}
+
+function installFakePnpm(url: string): void {
+	assert.ok(tempDir);
+	const binDir = join(tempDir, '.git', 'bin');
+	mkdirSync(binDir, { recursive: true });
+	const pnpmPath = join(binDir, 'pnpm');
+	writeFileSync(
+		pnpmPath,
+		`#!/bin/sh\nprintf '%s' '{"packages":[{"url":"${url}"}]}' > preview-release.json\nexit 0\n`,
+	);
+	chmodSync(pnpmPath, 0o755);
+	process.env.PATH = `${binDir}:${originalPath ?? ''}`;
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -205,5 +238,108 @@ describe('mocked triage flow', () => {
 		assert.match(comments[0], /Reproduced/);
 		assert.equal(removedLabel, 'triage: needs triage');
 		assert.deepEqual(addedLabels, [['triage: unable to reproduce']]);
+	});
+
+	it('publishes a preview release for fixed package changes before marking fix pending', async () => {
+		const triageSkill = setupRepo();
+		configureLocalPushRemote();
+		installFakePnpm('https://pkg.pr.new/astro@test123');
+		writeFileSync(
+			join(tempDir as string, 'packages', 'astro', 'src', 'index.ts'),
+			'export const value = 2;\n',
+		);
+
+		process.env.ANTHROPIC_API_KEY = 'test-key';
+		const comments: string[] = [];
+		const addedLabels: string[][] = [];
+		const removedLabels: string[] = [];
+		let anthropicCalls = 0;
+		let commentPromptIncludedPreviewUrl = false;
+
+		globalThis.fetch = async (input, init) => {
+			const url = String(input);
+			if (url.startsWith('https://api.anthropic.com/')) {
+				anthropicCalls += 1;
+				const body = JSON.parse(String(init?.body ?? '{}'));
+				if (anthropicCalls === 1) {
+					return anthropicStream({ reproducible: true, skipped: false, skippedReason: null });
+				}
+				if (anthropicCalls === 2) return anthropicStream({ confidence: 'high' });
+				if (anthropicCalls === 3) return anthropicStream({ verdict: 'bug', confidence: 'high' });
+				if (anthropicCalls === 4) {
+					return anthropicStream({ fixed: true, commitMessage: 'fix: update astro package' });
+				}
+				if (anthropicCalls === 5) {
+					commentPromptIncludedPreviewUrl = JSON.stringify(body).includes(
+						'https://pkg.pr.new/astro@test123',
+					);
+					return anthropicStream({
+						result:
+							'- **Reproduced:** Yes\n- **Exploration:** Yes\n- **Unit Test:** Yes\n- **Priority:** Priority P3: Minor bug.\n\n### Try this fix\n\nnpm i https://pkg.pr.new/astro@test123\n',
+					});
+				}
+				if (anthropicCalls === 6) {
+					return anthropicStream({ priority: '- P3: minor bug', packages: ['pkg: astro'] });
+				}
+				throw new Error('Too many mocked Anthropic calls');
+			}
+
+			if (url.endsWith('/issues/123')) {
+				return jsonResponse({
+					title: 'Example issue',
+					body: 'Issue body',
+					user: { login: 'reporter' },
+					labels: [{ name: 'triage: needs triage' }],
+					created_at: '2026-01-01T00:00:00Z',
+					state: 'open',
+					number: 123,
+					html_url: 'https://github.com/withastro/astro/issues/123',
+				});
+			}
+			if (url.endsWith('/issues/123/comments?per_page=100')) return jsonResponse([]);
+			if (url.endsWith('/labels?per_page=100&page=1')) {
+				return jsonResponse([
+					{ name: '- P3: minor bug', description: 'Minor bug' },
+					{ name: 'pkg: astro', description: 'Core package' },
+				]);
+			}
+			if (url.endsWith('/issues/123/comments') && init?.method === 'POST') {
+				comments.push(JSON.parse(String(init.body)).body);
+				return jsonResponse({});
+			}
+			if (url.includes('/issues/123/labels/') && init?.method === 'DELETE') {
+				removedLabels.push(decodeURIComponent(url.split('/').at(-1) ?? ''));
+				return new Response('', { status: 200 });
+			}
+			if (url.endsWith('/issues/123/labels') && init?.method === 'POST') {
+				addedLabels.push(JSON.parse(String(init.body)).labels);
+				return jsonResponse([]);
+			}
+			throw new Error(`Unexpected fetch: ${url}`);
+		};
+
+		const ctx: ActionContext = {
+			repo: 'withastro/astro',
+			readToken: 'read-token',
+			writeToken: 'write-token',
+			anthropicApiKey: 'test-key',
+			triageSkill,
+			prSkill: null,
+			prSkillName: 'astro-pr-writer',
+			buildCommand: null,
+			triageModel: 'anthropic/claude-sonnet-4-6',
+			verificationModel: 'anthropic/claude-sonnet-4-6',
+			labels: labelConfigFromInputs(() => ''),
+			botLogins: ['github-actions[bot]', 'astrobot-houston'],
+		};
+
+		await withTimeout(handleTriage(123, ctx), 20_000);
+
+		assert.equal(anthropicCalls, 6);
+		assert.equal(commentPromptIncludedPreviewUrl, true);
+		assert.equal(comments.length, 1);
+		assert.match(comments[0], /https:\/\/pkg\.pr\.new\/astro@test123/);
+		assert.deepEqual(removedLabels, ['triage: needs triage']);
+		assert.deepEqual(addedLabels, [['triage: fix pending'], ['- P3: minor bug', 'pkg: astro']]);
 	});
 });
