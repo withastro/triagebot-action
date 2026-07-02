@@ -16,6 +16,7 @@ import {
 	addLabels,
 	fetchIssueDetails,
 	fetchRepoLabels,
+	gitCommit,
 	gitPush,
 	type IssueDetails,
 	postComment,
@@ -414,13 +415,17 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 			const status = await session.shell('git status --porcelain');
 			console.info(`Triage worktree status present: ${Boolean(status.stdout.trim())}`);
 			if (status.stdout.trim()) {
-				await session.shell('git add -A');
 				const defaultMessage = triageResult.fixed
 					? 'fix(auto-triage): automated fix'
 					: 'test(auto-triage): failing test and investigation notes';
 				const commitMessage = triageResult.commitMessage ?? defaultMessage;
 				console.info(`Triage committing changes with message: ${commitMessage}`);
-				await session.shell(`git commit -m ${JSON.stringify(commitMessage)}`);
+				const commitResult = await gitCommit(commitMessage);
+				if (commitResult.exitCode !== 0) {
+					throw new Error(
+						`git commit failed (exit ${commitResult.exitCode}): ${commitResult.stderr || commitResult.stdout}`,
+					);
+				}
 			}
 			const pushResult = await gitPush(ctx.repo, branch, ctx.writeToken, { force: true });
 			console.info('push result:', pushResult);

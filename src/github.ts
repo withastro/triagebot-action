@@ -3,11 +3,12 @@
  * controls whether a read or write token is used.
  */
 
-import { exec as execCb } from 'node:child_process';
+import { exec as execCb, execFile as execFileCb } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as v from 'valibot';
 
 const execAsync = promisify(execCb);
+const execFileAsync = promisify(execFileCb);
 
 function headers(token: string): Record<string, string> {
 	return {
@@ -274,6 +275,24 @@ export async function deleteBranch(repo: string, branch: string, token: string):
 	if (!res.ok && res.status !== 422) {
 		// 422 = ref doesn't exist, which is fine
 		throw new Error(`Failed to delete branch (HTTP ${res.status}): ${await res.text()}`);
+	}
+}
+
+/**
+ * Stage all changes and create a commit. Runs outside the sandbox and passes
+ * the commit message as an argv argument (never a shell string), so backticks,
+ * parentheses, quotes, and newlines in an LLM-authored message can't be
+ * interpreted by the shell or break the command.
+ */
+export async function gitCommit(
+	message: string,
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+	try {
+		await execFileAsync('git', ['add', '-A']);
+		const { stdout, stderr } = await execFileAsync('git', ['commit', '-m', message]);
+		return { exitCode: 0, stdout, stderr };
+	} catch (err: any) {
+		return { exitCode: err.code ?? 1, stdout: err.stdout ?? '', stderr: err.stderr ?? '' };
 	}
 }
 

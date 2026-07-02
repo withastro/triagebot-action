@@ -213839,7 +213839,7 @@ var init_expansion_R25BK4W3 = __esm({
 import { readFileSync } from "node:fs";
 
 // src/github.ts
-import { exec as execCb } from "node:child_process";
+import { exec as execCb, execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 
 // node_modules/.pnpm/valibot@1.4.1_typescript@5.9.3/node_modules/valibot/dist/index.mjs
@@ -214540,6 +214540,7 @@ function safeParse(schema, input, config$1) {
 
 // src/github.ts
 var execAsync = promisify(execCb);
+var execFileAsync = promisify(execFileCb);
 function headers(token) {
   return {
     Authorization: `token ${token}`,
@@ -214724,6 +214725,15 @@ async function deleteBranch(repo, branch, token) {
   );
   if (!res.ok && res.status !== 422) {
     throw new Error(`Failed to delete branch (HTTP ${res.status}): ${await res.text()}`);
+  }
+}
+async function gitCommit(message) {
+  try {
+    await execFileAsync("git", ["add", "-A"]);
+    const { stdout, stderr } = await execFileAsync("git", ["commit", "-m", message]);
+    return { exitCode: 0, stdout, stderr };
+  } catch (err2) {
+    return { exitCode: err2.code ?? 1, stdout: err2.stdout ?? "", stderr: err2.stderr ?? "" };
   }
 }
 async function gitPush(repo, branch, token, options) {
@@ -241463,11 +241473,15 @@ async function runTriage(issueNumber, ctx) {
       const status = await session.shell("git status --porcelain");
       console.info(`Triage worktree status present: ${Boolean(status.stdout.trim())}`);
       if (status.stdout.trim()) {
-        await session.shell("git add -A");
         const defaultMessage = triageResult.fixed ? "fix(auto-triage): automated fix" : "test(auto-triage): failing test and investigation notes";
         const commitMessage = triageResult.commitMessage ?? defaultMessage;
         console.info(`Triage committing changes with message: ${commitMessage}`);
-        await session.shell(`git commit -m ${JSON.stringify(commitMessage)}`);
+        const commitResult = await gitCommit(commitMessage);
+        if (commitResult.exitCode !== 0) {
+          throw new Error(
+            `git commit failed (exit ${commitResult.exitCode}): ${commitResult.stderr || commitResult.stdout}`
+          );
+        }
       }
       const pushResult = await gitPush(ctx.repo, branch, ctx.writeToken, { force: true });
       console.info("push result:", pushResult);
