@@ -1,0 +1,39 @@
+README.md
+  s_b49aef97cf4c05::t_d5d7efc44e7f27 9-10,162
+dist/index.mjs
+  s_2aafdfb8d43a08::t_a049de06a8a667 241069-241120,241425,241432-241435,241548,241550-241567,241569-241574,241577-241579,241583,241591-241595,241598,241785,241880
+dist/index.mjs.map
+  s_2aafdfb8d43a08::t_e1cdba6cfd658f 3-5
+src/handlers/triage.ts
+  s_2aafdfb8d43a08::t_e3343ed2642153 17,20,24,30,36,288-292,294,298,306-309,451,453-472,474-479,482-484,493,502-508,513
+test/integration/mocked-triage-flow.test.ts
+  s_b49aef97cf4c05::t_54683e38eec6ec 227,330,347-473
+test/integration/triage-handler.test.ts
+  s_b49aef97cf4c05::t_49c491676c1398 88
+test/integration/verify-fix-handler.test.ts
+  s_b49aef97cf4c05::t_0cf01703812db1 164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5f44a09610e62c5b51079d1bbeb108627285a3cf",
+  "prompts": {},
+  "sessions": {
+    "s_2aafdfb8d43a08": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_080158a4affe944NuBkUb4Ps4N",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "ematipico <estoppa@cloudflare.com>"
+    },
+    "s_b49aef97cf4c05": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08035feaeffeEG8Xzb6nybr7sx",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "ematipico <estoppa@cloudflare.com>"
+    }
+  }
+}
