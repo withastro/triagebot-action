@@ -1,0 +1,23 @@
+dist/index.mjs
+  s_c438e8855475d6::t_ae7d3fcea4995b 241837-241839,241849-241868
+dist/index.mjs.map
+  s_c438e8855475d6::t_fd2dc52658b4f0 4-5
+src/index.ts
+  s_c438e8855475d6::t_38b2b1d599d3e0 59-61,72-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "476b3c1de66f1ab42060b7ca58d590b34775fa39",
+  "prompts": {},
+  "sessions": {
+    "s_c438e8855475d6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07fe92abcffeIsiJladM8t668i",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Matthew Phillips <matthewphillips@cloudflare.com>"
+    }
+  }
+}
