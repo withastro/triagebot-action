@@ -1,0 +1,19 @@
+src/index.ts
+  s_c438e8855475d6::t_0e56fbbf33b106 72-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a8a31eec4eb80e3bab110c0282ab320592c046a5",
+  "prompts": {},
+  "sessions": {
+    "s_c438e8855475d6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07fe92abcffeIsiJladM8t668i",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Matthew Phillips <matthewphillips@cloudflare.com>"
+    }
+  }
+}
