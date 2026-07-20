@@ -1,0 +1,45 @@
+.gitignore
+  s_c438e8855475d6::t_7d147ba57423b6 5
+README.md
+  s_c438e8855475d6::t_5cea780cf8eaca 9-10,183
+action.yml
+  s_c438e8855475d6::t_0f34d7433ff0db 31-33
+dist/index.mjs
+  s_c438e8855475d6::t_76091d3a7b9764 241069-241120,241425,241432-241435,241548,241550-241567,241569-241574,241577-241579,241583,241591-241595,241598,241785,241882,241900-241908
+dist/index.mjs.map
+  s_c438e8855475d6::t_ec8287606ef84a 3-5
+src/context.ts
+  s_c438e8855475d6::t_b49ced5c26a59d 17
+src/handlers/triage.ts
+  s_c438e8855475d6::t_6673a28e2a3c2c 17,20,24,30,36,288-292,294,298,306-309,451,453-472,474-479,482-484,493,502-508,513
+src/handlers/verify-fix.ts
+  s_c438e8855475d6::t_aeaa691e8461bf 23,161
+src/index.ts
+  s_c438e8855475d6::t_25c635a3455327 65
+src/pr.ts
+  s_c438e8855475d6::t_716ff0555d2957 1-111
+test/integration/mocked-triage-flow.test.ts
+  s_c438e8855475d6::t_0692d42449247b 227,330,347-473
+test/integration/triage-handler.test.ts
+  s_c438e8855475d6::t_0ee4791c00524c 88
+test/integration/verify-fix-handler.test.ts
+  s_c438e8855475d6::t_79954160e14506 164
+test/triage-label.test.ts
+  s_c438e8855475d6::t_ceb566e7c3f727 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ed70e2ffafce37fb48482509422c8aa3860e7532",
+  "prompts": {},
+  "sessions": {
+    "s_c438e8855475d6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07fe92abcffeIsiJladM8t668i",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Matthew Phillips <matthewphillips@cloudflare.com>"
+    }
+  }
+}
