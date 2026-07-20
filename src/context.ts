@@ -12,6 +12,7 @@ export interface ActionContext {
 	triageSkill: string;
 	prSkill: string | null;
 	prSkillName: string;
+	autoPrOnFix: boolean;
 	buildCommand: string | null;
 	triageModel: string;
 	verificationModel: string;

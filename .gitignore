@@ -2,3 +2,4 @@ node_modules/
 *.tgz
 .pnpm-store/
 /triage/
+.idea/

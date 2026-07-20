@@ -85,6 +85,7 @@ describe('handleTriage integration', () => {
 			triageSkill: createTriageSkill(),
 			prSkill: null,
 			prSkillName: 'astro-pr-writer',
+			autoPrOnFix: false,
 			buildCommand: null,
 			triageModel: false as unknown as string,
 			verificationModel: false as unknown as string,

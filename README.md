@@ -6,6 +6,8 @@ AI-powered issue triage bot for GitHub repositories. Uses a label-driven state m
 
 When an issue is opened, the bot adds a triage label and runs an AI agent through a multi-stage pipeline: **reproduce** the bug, **diagnose** the root cause, **verify** it's actually a bug, and **attempt a fix**. If a fix is found, it pushes a branch, publishes a preview release, and asks the reporter to confirm. When they do, it creates a PR.
 
+Repositories that can't publish preview releases (or that prefer to skip the confirmation step) can set `auto-pr-on-fix: true` to open the PR immediately once a fix is pushed, moving the issue straight to `fix verified`.
+
 The entire flow is driven by a finite state machine encoded as GitHub labels. Each issue has exactly one triage label at any time, and transitions happen automatically based on events and AI classification.
 
 ### State Machine
@@ -157,6 +159,7 @@ You also need an **`anthropic-api-key`** for the AI agent.
 | `anthropic-api-key` | Yes | | Anthropic API key for LLM calls |
 | `triage-skill` | Yes | | Path to triage skill directory (`SKILL.md`, `reproduce.md`, etc.) |
 | `pr-skill` | No | | Path to PR writer skill directory. If not provided, uses a built-in prompt. |
+| `auto-pr-on-fix` | No | `false` | When `true`, open a PR immediately after triage finds and pushes a fix, skipping the preview/confirmation flow. |
 | `bot-logins` | No | | Comma-separated list of bot usernames whose comments should be ignored. `github-actions[bot]` is always included. |
 | `build-command` | No | | Command to build the project before triage |
 | `triage-model` | No | `anthropic/claude-opus-4-6` | Model for the triage pipeline |

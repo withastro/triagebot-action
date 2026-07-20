@@ -161,6 +161,7 @@ describe('handleVerifyFix integration', () => {
 			triageSkill: '.agents/skills/triage',
 			prSkill: null,
 			prSkillName: 'astro-pr-writer',
+			autoPrOnFix: false,
 			buildCommand: null,
 			triageModel: 'anthropic/claude-sonnet-4-6',
 			verificationModel: 'anthropic/claude-sonnet-4-6',

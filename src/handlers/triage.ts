@@ -14,22 +14,26 @@ import type { ActionContext } from '../context.ts';
 import { createSession } from '../flue.ts';
 import {
 	addLabels,
+	createPullRequest,
 	fetchIssueDetails,
 	fetchRepoLabels,
+	findPullRequest,
 	gitCommit,
 	gitPush,
 	type IssueDetails,
+	type PullRequest,
 	postComment,
 	type RepoLabel,
 	swapLabel,
 } from '../github.ts';
 import { currentTriageLabel } from '../labels.ts';
+import { generatePRContent } from '../pr.ts';
 import { generateComment } from './comment.ts';
 
 export const MAX_TRIAGE_FAILURES = 3;
 const TRIAGE_FAILURE_MARKER = '<!-- triagebot:triage-failed -->';
 
-interface TriageResult {
+export interface TriageResult {
 	completedStage: 'reproduce' | 'verify' | 'fix';
 	reproducible: boolean;
 	skipped: boolean;
@@ -281,11 +285,17 @@ ${comment}
 
 /**
  * Determine which triage label to apply based on the pipeline result.
+ *
+ * When a pull request was opened directly (auto-pr-on-fix), the issue is
+ * considered verified. Otherwise a fix goes to "fix pending" when a preview
+ * release is available for the reporter to test, or falls back to
+ * "needs triage" when there is nothing for them to try.
  */
-function resolveTriageLabel(
+export function resolveTriageLabel(
 	result: TriageResult,
 	ctx: ActionContext,
 	previewRelease: PreviewRelease | null,
+	prOpened: boolean,
 ): string {
 	if (result.skipped) {
 		if (result.skippedReason === 'not-actionable') return ctx.labels.notActionable;
@@ -293,7 +303,10 @@ function resolveTriageLabel(
 		return ctx.labels.skipped;
 	}
 	if (!result.reproducible) return ctx.labels.unableToReproduce;
-	if (result.fixed) return previewRelease ? ctx.labels.fixPending : ctx.labels.needsTriage;
+	if (result.fixed) {
+		if (prOpened) return ctx.labels.fixVerified;
+		return previewRelease ? ctx.labels.fixPending : ctx.labels.needsTriage;
+	}
 	return ctx.labels.unableToFix;
 }
 
@@ -435,15 +448,40 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 	console.info(`Triage branch pushed: ${isPushed}`);
 
 	let previewRelease: PreviewRelease | null = null;
+	let openedPr: PullRequest | null = null;
 	if (triageResult.fixed && isPushed) {
-		previewRelease = await publishPreviewRelease(session);
-		if (previewRelease) {
-			console.info('Preview release published:', previewRelease.urls);
+		if (ctx.autoPrOnFix) {
+			// Direct-PR mode: open a PR immediately, skipping the preview /
+			// reporter-confirmation flow.
+			openedPr = await findPullRequest(ctx.repo, branch, ctx.readToken);
+			if (openedPr) {
+				console.info(`Auto-PR skipped: PR already exists at ${openedPr.html_url}.`);
+			} else {
+				const prContent = await generatePRContent(
+					session,
+					{ issueNumber, issueDetails, branch },
+					ctx,
+				);
+				openedPr = await createPullRequest(
+					ctx.repo,
+					{ head: branch, base: 'main', title: prContent.title, body: prContent.body },
+					ctx.writeToken,
+				);
+				console.info(`Auto-PR created: ${openedPr.html_url}`);
+				await addLabels(ctx.repo, openedPr.number, [ctx.labels.prFixVerified], ctx.writeToken);
+			}
 		} else {
-			console.info('Preview release unavailable for fixed issue.');
+			previewRelease = await publishPreviewRelease(session);
+			if (previewRelease) {
+				console.info('Preview release published:', previewRelease.urls);
+			} else {
+				console.info('Preview release unavailable for fixed issue.');
+			}
 		}
 	} else {
-		console.info(`Preview release skipped: fixed=${triageResult.fixed} branchPushed=${isPushed}.`);
+		console.info(
+			`Preview release / auto-PR skipped: fixed=${triageResult.fixed} branchPushed=${isPushed}.`,
+		);
 	}
 
 	// Fetch repo labels for comment generation and label selection.
@@ -452,7 +490,7 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 	const branchName = isPushed ? branch : null;
 
 	// Generate the triage comment using the action's built-in comment skill.
-	const comment = await generateComment(session, {
+	let comment = await generateComment(session, {
 		branchName,
 		priorityLabels,
 		issueDetails,
@@ -461,11 +499,18 @@ async function runTriage(issueNumber: number, ctx: ActionContext): Promise<void>
 	});
 	console.info(`Generated triage comment (${comment.length} chars).`);
 
+	// When a PR was opened directly, let the reporter know instead of asking
+	// them to test a preview (which the comment template omits when there is
+	// no preview release).
+	if (openedPr) {
+		comment += `\n\nI've opened a pull request with this fix: ${openedPr.html_url}`;
+	}
+
 	await postComment(ctx.repo, issueNumber, comment, ctx.writeToken);
 	console.info(`Posted triage comment for issue #${issueNumber}.`);
 
 	// Determine and apply the new triage label.
-	const newLabel = resolveTriageLabel(triageResult, ctx, previewRelease);
+	const newLabel = resolveTriageLabel(triageResult, ctx, previewRelease, Boolean(openedPr));
 	console.info(`Swapping triage label from ${currentLabel ?? '(none)'} to ${newLabel}.`);
 	await swapLabel(ctx.repo, issueNumber, currentLabel, newLabel, ctx.writeToken);
 

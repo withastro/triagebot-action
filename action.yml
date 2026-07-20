@@ -22,6 +22,9 @@ inputs:
   pr-skill-name:
     description: 'The skill name (from SKILL.md frontmatter) to invoke for PR generation. Only used when pr-skill is set.'
     default: 'pr-writer'
+  auto-pr-on-fix:
+    description: 'When true, open a pull request immediately after triage finds and pushes a fix, skipping the reporter-confirmation (preview release) flow. Default false preserves the confirm-first behavior.'
+    default: 'false'
   build-command:
     description: 'Command to build the project before triage runs (e.g. "pnpm install && pnpm build")'
     required: false

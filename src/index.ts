@@ -60,6 +60,7 @@ async function main(): Promise<void> {
 		triageSkill: getRequiredInput('triage-skill'),
 		prSkill: getInput('pr-skill') || null,
 		prSkillName: getInput('pr-skill-name') || 'pr-writer',
+		autoPrOnFix: getInput('auto-pr-on-fix') === 'true',
 		buildCommand: getInput('build-command') || null,
 		triageModel: getInput('triage-model') || 'anthropic/claude-opus-4-6',
 		verificationModel: getInput('verification-model') || 'anthropic/claude-sonnet-4-6',
