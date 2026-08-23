@@ -152,6 +152,7 @@ You also need credentials for the AI agent. Choose one of:
 
 - **`anthropic-api-key`** — to use Anthropic models (the default `triage-model` / `verification-model`).
 - **`cloudflare-api-key`** + **`cloudflare-account-id`** — to use Cloudflare Workers AI models (e.g. Kimi). Requires setting `triage-model` / `verification-model` to a `cloudflare-workers-ai/*` model.
+- **`openai-api-key`** — to use OpenAI models. Requires setting `triage-model` / `verification-model` to a GPT model.
 
 Workers AI is called over its OpenAI-compatible REST endpoint, so the action still runs on the standard GitHub Actions runner — no Worker deployment is required.
 
@@ -178,6 +179,7 @@ Workers AI is called over its OpenAI-compatible REST endpoint, so the action sti
 | `anthropic-api-key` | No¹ | | Anthropic API key for LLM calls |
 | `cloudflare-api-key` | No¹ | | Cloudflare API token with Workers AI access. Enables `cloudflare-workers-ai/*` models. Requires `cloudflare-account-id` |
 | `cloudflare-account-id` | No¹ | | Cloudflare account ID for the Workers AI REST endpoint. Required when `cloudflare-api-key` is set |
+| `openai-api-key` | No¹ | | OpenAI API key for LLM calls |
 | `triage-skill` | Yes | | Path to triage skill directory (`SKILL.md`, `reproduce.md`, etc.) |
 | `pr-skill` | No | | Path to PR writer skill directory. If not provided, uses a built-in prompt. |
 | `auto-pr-on-fix` | No | `false` | When `true`, open a PR immediately after triage finds and pushes a fix, skipping the preview/confirmation flow. |
@@ -186,7 +188,7 @@ Workers AI is called over its OpenAI-compatible REST endpoint, so the action sti
 | `triage-model` | No | `anthropic/claude-opus-4-6` | Model for the triage pipeline (`provider/model-id`, e.g. `cloudflare-workers-ai/@cf/moonshotai/kimi-k2.7-code`) |
 | `verification-model` | No | `anthropic/claude-sonnet-4-6` | Model for fix verification and retriage checks |
 
-¹ Provide either `anthropic-api-key`, or both `cloudflare-api-key` and `cloudflare-account-id`. The credentials must match the provider prefix used in `triage-model` / `verification-model`.
+¹ Provide either `anthropic-api-key`, `openai-api-key`, or both `cloudflare-api-key` and `cloudflare-account-id`. The credentials must match the provider prefix used in `triage-model` / `verification-model`.
 
 ### Label inputs
 

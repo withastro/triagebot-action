@@ -241876,6 +241876,7 @@ async function main() {
     anthropicApiKey: getInput("anthropic-api-key") || null,
     cloudflareApiKey: getInput("cloudflare-api-key") || null,
     cloudflareAccountId: getInput("cloudflare-account-id") || null,
+    openaiApiKey: getInput("openai-api-key") || null,
     triageSkill: getRequiredInput("triage-skill"),
     prSkill: getInput("pr-skill") || null,
     prSkillName: getInput("pr-skill-name") || "pr-writer",
@@ -241887,9 +241888,9 @@ async function main() {
     botLogins: parseBotLogins(getInput("bot-logins"))
   };
   const hasCloudflare = !!ctx.cloudflareApiKey && !!ctx.cloudflareAccountId;
-  if (!ctx.anthropicApiKey && !hasCloudflare) {
+  if (!ctx.anthropicApiKey && !ctx.openaiApiKey && !hasCloudflare) {
     throw new Error(
-      'No LLM credentials provided. Set "anthropic-api-key", or set both "cloudflare-api-key" and "cloudflare-account-id" to use Workers AI models.'
+      'No LLM credentials provided. Set "anthropic-api-key" or "openai-api-key", or set both "cloudflare-api-key" and "cloudflare-account-id" to use Workers AI models.'
     );
   }
   if (ctx.cloudflareApiKey && !ctx.cloudflareAccountId) {
@@ -241905,6 +241906,9 @@ async function main() {
   }
   if (ctx.cloudflareAccountId) {
     process.env.CLOUDFLARE_ACCOUNT_ID = ctx.cloudflareAccountId;
+  }
+  if (ctx.openaiApiKey) {
+    process.env.OPENAI_API_KEY = ctx.openaiApiKey;
   }
   const issue2 = payload.issue;
   if (!issue2) {
