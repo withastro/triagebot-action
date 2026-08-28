@@ -11,6 +11,7 @@ export interface ActionContext {
 	anthropicApiKey: string | null;
 	cloudflareApiKey: string | null;
 	cloudflareAccountId: string | null;
+	openaiApiKey: string | null;
 	triageSkill: string;
 	prSkill: string | null;
 	prSkillName: string;

@@ -10,13 +10,16 @@ inputs:
     description: 'GitHub token for posting comments, pushing branches, creating PRs, and managing labels'
     required: true
   anthropic-api-key:
-    description: 'Anthropic API key for LLM calls. Required unless Cloudflare Workers AI credentials are provided.'
+    description: 'Anthropic API key for LLM calls. Required unless OpenAI or Cloudflare Workers AI credentials are provided.'
     required: false
   cloudflare-api-key:
     description: 'Cloudflare API token with Workers AI access. Enables using cloudflare-workers-ai/* models (e.g. Kimi). Requires cloudflare-account-id.'
     required: false
   cloudflare-account-id:
     description: 'Cloudflare account ID for the Workers AI REST endpoint. Required when cloudflare-api-key is set.'
+    required: false
+  openai-api-key:
+    description: 'OpenAI API key for LLM calls. Required unless Anthropic or Cloudflare Workers AI credentials are provided.'
     required: false
 
   triage-skill:
